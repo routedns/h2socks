@@ -1,0 +1,31 @@
+services:
+  socks5:
+    image: imzami/socks5
+    container_name: socks5-test
+    restart: always
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    ports:
+      - "1080:1080"
+    environment:
+      - SOCKS5_USER=
+      - SOCKS5_PASSWORD=
+    networks:
+      - sthp-net
+
+  sthp:
+    build: .
+    container_name: socks-to-http-proxy
+    ports:
+      - "8080:8080"
+    # arguments only, as entrypoint defines the binary
+    command: [ "--socks-address", "socks5:1080", "--username", "imzami", "--password", "11221099" ]
+    depends_on:
+      - socks5
+    networks:
+      - sthp-net
+
+networks:
+  sthp-net:
+    driver: bridge

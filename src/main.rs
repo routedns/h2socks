@@ -38,14 +38,14 @@ struct Cli {
     #[arg(short, long, default_value_t = 8080)]
     port: u16,
 
-    #[arg(long, default_value = "127.0.0.1")]
+    #[arg(long, default_value = "0.0.0.0")]
     listen_ip: IpAddr,
 
     #[command(flatten)]
     auth: Option<AuthParams>,
 
     /// Socks5 proxy address
-    #[arg(short, long, default_value = "127.0.0.1:1080", value_parser=socket_addr)]
+    #[arg(short, long, default_value = "0.0.0.0:1080", value_parser=socket_addr)]
     socks_address: SocketAddr,
 
     /// Comma-separated list of allowed domains

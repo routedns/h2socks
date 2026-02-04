@@ -100,20 +100,46 @@ async fn proxy(
             Ok(resp)
         }
     } else {
-        let host = req.uri().host().expect("uri has no host");
+        let host = match req.uri().host() {
+            Some(host) => host,
+            None => {
+                warn!("Request URI has no host: {}", req.uri());
+                let mut resp = Response::new(full("Request URI must be absolute (e.g., http://example.com/)"));
+                *resp.status_mut() = hyper::StatusCode::BAD_REQUEST;
+                return Ok(resp);
+            }
+        };
         let port = req.uri().port_u16().unwrap_or(80);
         let addr = format!("{}:{}", host, port);
 
         let stream = match auth {
-            Some(auth) => Socks5Stream::connect_with_password(
-                socks_addr,
-                addr,
-                &auth.username,
-                &auth.password,
-            )
-            .await
-            .unwrap(),
-            None => Socks5Stream::connect(socks_addr, addr).await?,
+            Some(auth) => {
+                match Socks5Stream::connect_with_password(
+                    socks_addr,
+                    addr,
+                    &auth.username,
+                    &auth.password,
+                )
+                .await
+                {
+                    Ok(s) => s,
+                    Err(e) => {
+                        warn!("SOCKS5 connection failed: {}", e);
+                        let mut resp = Response::new(full("Failed to connect to SOCKS5 proxy"));
+                        *resp.status_mut() = hyper::StatusCode::BAD_GATEWAY;
+                        return Ok(resp);
+                    }
+                }
+            }
+            None => match Socks5Stream::connect(socks_addr, addr).await {
+                Ok(s) => s,
+                Err(e) => {
+                    warn!("SOCKS5 connection failed: {}", e);
+                    let mut resp = Response::new(full("Failed to connect to SOCKS5 proxy"));
+                    *resp.status_mut() = hyper::StatusCode::BAD_GATEWAY;
+                    return Ok(resp);
+                }
+            },
         };
         let io = TokioIo::new(stream);
 
