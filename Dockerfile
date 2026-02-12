@@ -1,5 +1,5 @@
 # Builder stage
-FROM rust:alpine as builder
+FROM rust:alpine AS builder
 
 WORKDIR /usr/src/sthp
 
